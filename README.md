@@ -3,6 +3,10 @@
 
 ## **Sample Images**
 ![All Properties](images/all_properties.png)
+#### **All Properties**
 ![New User](images/new_user.png)
+#### **New User Registration**
 ![User Login](images/user_login.png)
+#### **Existing User Login Page**
 ![User's Properties](images/user_properties.png)
+#### **Current User's Listed Properties**
