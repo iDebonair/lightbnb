@@ -170,7 +170,6 @@ const getAllProperties = function (options, limit = 10) {
     }else{
       queryString += `GROUP BY properties.id HAVING avg(property_reviews.rating) >= $${queryParams.length}`;
     }
-    // queryString += `${queryParams.length === 1 ? 'HAVING' : 'AND'} avg(property_reviews.rating) >= $${queryParams.length} `;
   }
 
   queryParams.push(limit);
