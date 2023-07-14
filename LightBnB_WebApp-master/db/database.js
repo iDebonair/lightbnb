@@ -101,7 +101,7 @@ const addUser = function (user) {
  */
 const getAllReservations = function (guest_id, limit = 10) {
 query = `
-SELECT reservations.id, properties.title, properties.cost_per_night, reservations.start_date, avg(rating) as average_rating
+SELECT reservations.id, properties.title, properties.cost_per_night, reservations.start_date, avg(rating) as average_rating, properties.parking_spaces, properties.number_of_bathrooms, properties.number_of_bedrooms
 FROM reservations
 JOIN properties ON reservations.property_id = properties.id
 JOIN property_reviews ON properties.id = property_reviews.property_id
@@ -115,7 +115,7 @@ const values = [guest_id, limit];
 return pool
 .query(query, values)
 .then((result) => {
-  const reservations = result.rows[0];
+  const reservations = result.rows;
   return reservations;
 })
 .catch((error) => {
@@ -133,6 +133,7 @@ return pool
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = function (options, limit = 10) {
+  console.log("This is options", options);
   const queryParams = [];
   let queryString = `
     SELECT properties.*, AVG(property_reviews.rating) AS average_rating
@@ -145,31 +146,42 @@ const getAllProperties = function (options, limit = 10) {
     queryString += `WHERE city LIKE $${queryParams.length}`;
   }
 
-  if (options.owner_id) {
-    queryParams.push(options.owner_id);
-    queryString += `${queryParams.length === 1 ? 'WHERE' : 'AND'} owner_id = $${queryParams.length} `;
+  if (options.maximum_price_per_night) {
+    console.log("This is query params", queryParams);
+    queryParams.push(options.maximum_price_per_night*100);
+    queryString += `${queryParams.length === 1 ? 'WHERE' : 'AND'} cost_per_night < $${queryParams.length}`;
+  }
+
+  if (options.minimum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night*100);
+    queryString += `${queryParams.length === 1 ? 'WHERE' : 'AND'} cost_per_night > $${queryParams.length}`;
   }
 
   if (options.minimum_price_per_night && options.maximum_price_per_night) {
-    queryParams.push(options.minimum_price_per_night);
-    queryParams.push(options.maximum_price_per_night);
+    queryParams.push(options.minimum_price_per_night*100);
+    queryParams.push(options.maximum_price_per_night*100);
     queryString += `${queryParams.length === 2 ? 'WHERE' : 'AND'} cost_per_night BETWEEN $${queryParams.length - 1} AND $${queryParams.length} `;
   }
 
   if (options.minimum_rating) {
     queryParams.push(options.minimum_rating);
-    queryString += `${queryParams.length === 1 ? 'HAVING' : 'AND'} avg(property_reviews.rating) >= $${queryParams.length} `;
+    if(queryParams.length ===1){
+      queryString += 'GROUP BY properties.id HAVING avg(property_reviews.rating) >= $1 ';
+    }else{
+      queryString += `GROUP BY properties.id HAVING avg(property_reviews.rating) >= $${queryParams.length}`;
+    }
+    // queryString += `${queryParams.length === 1 ? 'HAVING' : 'AND'} avg(property_reviews.rating) >= $${queryParams.length} `;
   }
-  
+
   queryParams.push(limit);
   queryString += `
-    GROUP BY properties.id
+    
     ORDER BY cost_per_night
     LIMIT $${queryParams.length};
   `;
 
   console.log('Query:', queryString);
-  console.log('Params:', queryParams);
+  // console.log('Params:', queryParams);
 
   return pool.query(queryString, queryParams)
     .then((res) => res.rows)
@@ -178,6 +190,7 @@ const getAllProperties = function (options, limit = 10) {
       throw error;
     });
 };
+
 
 
 /**
@@ -191,7 +204,7 @@ const addProperty = function (property) {
   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
   RETURNING *
 `;
-const values = [property.owner_id, property.title, property.description, property.thumbnail_photo_url, property.cover_photo_url, property.cost_per_night, property.street, property.city, property.province, property.post_code, property.country, property.parking_spaces, property.number_of_bathrooms, property.number_of_bedrooms];
+const values = [property.owner_id, property.title, property.description, property.thumbnail_photo_url, property.cover_photo_url, property.cost_per_night*100, property.street, property.city, property.province, property.post_code, property.country, property.parking_spaces, property.number_of_bathrooms, property.number_of_bedrooms];
 
 return pool
   .query(query, values)
