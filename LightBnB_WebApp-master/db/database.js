@@ -133,7 +133,6 @@ return pool
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = function (options, limit = 10) {
-  console.log("This is options", options);
   const queryParams = [];
   let queryString = `
     SELECT properties.*, AVG(property_reviews.rating) AS average_rating
@@ -147,7 +146,6 @@ const getAllProperties = function (options, limit = 10) {
   }
 
   if (options.maximum_price_per_night) {
-    console.log("This is query params", queryParams);
     queryParams.push(options.maximum_price_per_night*100);
     queryString += `${queryParams.length === 1 ? 'WHERE' : 'AND'} cost_per_night < $${queryParams.length}`;
   }
@@ -170,17 +168,18 @@ const getAllProperties = function (options, limit = 10) {
     }else{
       queryString += `GROUP BY properties.id HAVING avg(property_reviews.rating) >= $${queryParams.length}`;
     }
+  }else{
+    queryString += `GROUP BY properties.id`
   }
 
   queryParams.push(limit);
   queryString += `
-    
     ORDER BY cost_per_night
     LIMIT $${queryParams.length};
   `;
 
   console.log('Query:', queryString);
-  // console.log('Params:', queryParams);
+  console.log('Params:', queryParams);
 
   return pool.query(queryString, queryParams)
     .then((res) => res.rows)
